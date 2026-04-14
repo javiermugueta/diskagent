@@ -1,98 +1,98 @@
-# diskagent (Linux/macOS)
+# diskagent (Linux/macOS/Windows)
 
-Agente en Go para Linux y macOS que:
-- Detecta filesystems montados de forma nativa por SO (Linux: `/proc/self/mountinfo`, macOS: `getfsstat`)
-- Calcula por mountpoint:
+Go agent for Linux, macOS, and Windows that:
+- Detects mounted filesystems using native OS APIs (Linux: `/proc/self/mountinfo`, macOS: `getfsstat`, Windows: logical drives API)
+- Calculates per mount point:
   - `filesystem_total_bytes`
   - `filesystem_used_bytes`
   - `filesystem_usage_percent` (`used/total * 100`)
-- Excluye por defecto filesystems pseudo/virtuales (ej: `proc`, `sysfs`, `tmpfs`, `cgroup`, `overlay`)
-- Publica métricas en Oracle Cloud Infrastructure Monitoring
+- Excludes pseudo/virtual filesystems by default (for example: `proc`, `sysfs`, `tmpfs`, `cgroup`, `overlay`)
+- Publishes metrics to Oracle Cloud Infrastructure Monitoring
 
-## Variables de entorno
+## Environment Variables
 
-- `ORACLE_METRICS_NAMESPACE` (obligatoria si `--output=oci_metrics` o `--output=both`)
-- `ORACLE_COMPARTMENT_OCID` (obligatoria si `--output=oci_metrics` o `--output=both`)
-- `ORACLE_RESOURCE_GROUP` (opcional)
-- `ORACLE_AUTH_MODE` (opcional):
-  - `config` (default): usa `~/.oci/config`
-  - `instance_principal`: usa Instance Principal
+- `ORACLE_METRICS_NAMESPACE` (required if `--output=oci_metrics` or `--output=both`)
+- `ORACLE_COMPARTMENT_OCID` (required if `--output=oci_metrics` or `--output=both`)
+- `ORACLE_RESOURCE_GROUP` (optional)
+- `ORACLE_AUTH_MODE` (optional):
+  - `config` (default): uses `~/.oci/config`
+  - `instance_principal`: uses Instance Principal
 
-## Ejecución
+## Run
 
 ```bash
 go mod tidy
 go run ./cmd/linuxfsagent --once
 ```
 
-Selector de salida:
+Output selector:
 
 ```bash
-# Solo OCI Monitoring
+# OCI Monitoring only
 go run ./cmd/linuxfsagent --once --output oci_metrics
 
-# Solo salida estándar (stdout)
+# Standard output only (stdout)
 go run ./cmd/linuxfsagent --once --output stdout
 
-# Ambos destinos (default)
+# Both destinations (default)
 go run ./cmd/linuxfsagent --once --output both
 ```
 
-Modo daemon (cada 60s por defecto):
+Daemon mode (every 60s by default):
 
 ```bash
 go run ./cmd/linuxfsagent --interval 60s
 ```
 
-Incluir también pseudo/virtuales:
+Include pseudo/virtual filesystems:
 
 ```bash
 go run ./cmd/linuxfsagent --once --include-pseudo-fs
 ```
 
-## Empaquetado para Linux
+## Linux Packaging
 
-Genera paquetes listos para copiar a Linux (`amd64` y `arm64`):
+Build Linux packages (`amd64` and `arm64`):
 
 ```bash
 ./scripts/package_linux.sh
 ```
 
-Opcionalmente puedes pasar una versión:
+Optional version argument:
 
 ```bash
 ./scripts/package_linux.sh v0.1.0
 ```
 
-Salida en `dist/`:
+Output in `dist/`:
 
 - `linuxfsagent-<version>-linux-amd64.tar.gz`
 - `linuxfsagent-<version>-linux-arm64.tar.gz`
 
-Uso en Linux:
+Linux usage:
 
 ```bash
 tar -xzf linuxfsagent-<version>-linux-amd64.tar.gz
 cd linuxfsagent-<version>-linux-amd64
-cp .env.example .env   # si usarás salida OCI
+cp .env.example .env   # if OCI output will be used
 ./run-linuxfsagent.sh --once --output stdout
 ```
 
-## Empaquetado para macOS
+## macOS Packaging
 
-Genera paquetes para macOS (`amd64` y `arm64`):
+Build macOS packages (`amd64` and `arm64`):
 
 ```bash
 ./scripts/package_macos.sh v0.1.0
 ```
 
-Salida en `dist/`:
+Output in `dist/`:
 
 - `linuxfsagent-<version>-darwin-amd64.tar.gz`
 - `linuxfsagent-<version>-darwin-arm64.tar.gz`
-- `linuxfsagent-<version>-macos-universal.pkg` (con `./scripts/package_macos_pkg.sh <version>`)
+- `linuxfsagent-<version>-macos-universal.pkg` (with `./scripts/package_macos_pkg.sh <version>`)
 
-Uso en macOS:
+macOS usage:
 
 ```bash
 tar -xzf linuxfsagent-<version>-darwin-arm64.tar.gz
@@ -100,33 +100,33 @@ cd linuxfsagent-<version>-darwin-arm64
 ./linuxfsagent --once --output stdout
 ```
 
-Empaquetado instalable (`.pkg`) en macOS:
+Installable macOS package (`.pkg`):
 
 ```bash
 ./scripts/package_macos_pkg.sh v0.1.0
 sudo installer -pkg dist/linuxfsagent-v0.1.0-macos-universal.pkg -target /
 ```
 
-El `.pkg` instala:
+The `.pkg` installs:
 
-- binario: `/usr/local/bin/linuxfsagent`
-- ejemplo de config: `/usr/local/etc/linuxfsagent/.env.example`
+- binary: `/usr/local/bin/linuxfsagent`
+- sample config: `/usr/local/etc/linuxfsagent/.env.example`
 - LaunchDaemon: `/Library/LaunchDaemons/com.javiermugueta.linuxfsagent.plist`
 
-## Empaquetado para Windows
+## Windows Packaging
 
-Genera paquetes para Windows (`amd64` y `arm64`):
+Build Windows packages (`amd64` and `arm64`):
 
 ```bash
 ./scripts/package_windows.sh v0.1.0
 ```
 
-Salida en `dist/`:
+Output in `dist/`:
 
 - `linuxfsagent-<version>-windows-amd64.zip`
 - `linuxfsagent-<version>-windows-arm64.zip`
 
-Cada `zip` incluye:
+Each zip includes:
 
 - `linuxfsagent.exe`
 - `run-windows.ps1`
@@ -134,29 +134,29 @@ Cada `zip` incluye:
 - `uninstall-windows.ps1`
 - `.env.example`
 
-Instalación en Windows (PowerShell como Administrator):
+Windows installation (PowerShell as Administrator):
 
 ```powershell
-Expand-Archive .\\linuxfsagent-v0.1.0-windows-amd64.zip -DestinationPath .\\out -Force
-cd .\\out\\linuxfsagent-v0.1.0-windows-amd64
+Expand-Archive .\linuxfsagent-v0.1.0-windows-amd64.zip -DestinationPath .\out -Force
+cd .\out\linuxfsagent-v0.1.0-windows-amd64
 Copy-Item .env.example .env
-.\\install-windows.ps1
+.\install-windows.ps1
 ```
 
-El instalador crea una tarea programada (`linuxfsagent`) que arranca al inicio como `SYSTEM`.
-El directorio por defecto de instalación es:
+The installer creates a scheduled task (`linuxfsagent`) that starts on boot as `SYSTEM`.
+Default install directory:
 
-- `C:\\ProgramData\\linuxfsagent`
+- `C:\ProgramData\linuxfsagent`
 
-## Release e instalación por endpoint (GitHub)
+## Release and Endpoint Installation (GitHub)
 
-Generar artefactos de release + checksums:
+Generate release artifacts + checksums:
 
 ```bash
 ./scripts/release_artifacts.sh v0.1.0
 ```
 
-Sube estos archivos al release `v0.1.0` en GitHub:
+Upload these files to release `v0.1.0` on GitHub:
 
 - `dist/linuxfsagent-v0.1.0-linux-amd64.tar.gz`
 - `dist/linuxfsagent-v0.1.0-linux-arm64.tar.gz`
@@ -165,38 +165,38 @@ Sube estos archivos al release `v0.1.0` en GitHub:
 - `dist/linuxfsagent-v0.1.0-windows-amd64.zip`
 - `dist/linuxfsagent-v0.1.0-windows-arm64.zip`
 - `dist/linuxfsagent-v0.1.0-macos-universal.pkg`
-- `dist/linuxfsagent-v0.1.0-1.x86_64.rpm` (si se genera en Linux con `rpmbuild`)
-- `dist/linuxfsagent-v0.1.0-1.aarch64.rpm` (opcional, depende del host de build)
+- `dist/linuxfsagent-v0.1.0-1.x86_64.rpm` (if generated on Linux with `rpmbuild`)
+- `dist/linuxfsagent-v0.1.0-1.aarch64.rpm` (optional; depends on build host)
 - `dist/checksums.txt`
 
-Instalación directa desde endpoint:
+Direct installation via endpoint:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/javiermugueta/diskagent/v0.1.0/install.sh | sudo bash
 ```
 
-Si tu proxy bloquea `raw.githubusercontent.com`, usa assets del release (dominio `github.com`):
+If your proxy blocks `raw.githubusercontent.com`, use release assets (`github.com`):
 
 ```bash
 curl -L https://github.com/javiermugueta/diskagent/releases/download/v0.1.0/install.sh | sudo bash -- --version v0.1.0
 ```
 
-Para instalar el último release publicado:
+Install latest published release:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/javiermugueta/diskagent/main/install.sh | sudo bash
 ```
 
-Instalacion con RPM (Oracle Linux / RHEL):
+RPM installation (Oracle Linux / RHEL):
 
 ```bash
-# si tienes repos externos con problemas TLS, desactívalos en este comando
-sudo dnf --disablerepo=docker-ce-stable localinstall -y ./linuxfsagent-v0.1.6-1.x86_64.rpm
+# if you have external repos with TLS issues, disable them in this command
+sudo dnf --disablerepo=docker-ce-stable localinstall -y ./linuxfsagent-v0.1.7-1.x86_64.rpm
 sudo systemctl status linuxfsagent
 journalctl -u linuxfsagent -f
 ```
 
-Instalar como servicio `systemd` (en la máquina Linux destino):
+Install as `systemd` service (Linux target host):
 
 ```bash
 sudo ./install-systemd.sh
@@ -204,33 +204,33 @@ sudo systemctl status linuxfsagent
 journalctl -u linuxfsagent -f
 ```
 
-La unidad se instala para ejecutar como usuario/grupo `opc`, y el instalador asigna propiedad de `/opt/linuxfsagent` a `opc:opc`.
+The service runs as user/group `opc`, and the installer sets ownership of `/opt/linuxfsagent` to `opc:opc`.
 
-Si necesitas cambiar flags (por ejemplo `--output stdout`), edita:
+If you need to change flags (for example `--output stdout`), edit:
 
 - `/etc/systemd/system/linuxfsagent.service`
 
-Y recarga:
+Then reload:
 
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl restart linuxfsagent
 ```
 
-En macOS, si instalas con `.pkg`, el `LaunchDaemon` se carga automáticamente y escribe logs en:
+On macOS, if installed via `.pkg`, the `LaunchDaemon` starts automatically and writes logs to:
 
 - `/var/log/linuxfsagent.log`
 
-Comandos útiles en macOS:
+Useful macOS commands:
 
 ```bash
 sudo launchctl list | grep com.javiermugueta.linuxfsagent
 tail -f /var/log/linuxfsagent.log
 ```
 
-## Desinstalación
+## Uninstall
 
-Linux (instalación por `install-systemd.sh`):
+Linux (installed via `install-systemd.sh`):
 
 ```bash
 sudo systemctl disable --now linuxfsagent || true
@@ -239,13 +239,13 @@ sudo systemctl daemon-reload
 sudo rm -rf /opt/linuxfsagent
 ```
 
-Linux (instalación por RPM):
+Linux (installed via RPM):
 
 ```bash
 sudo dnf remove -y linuxfsagent
 ```
 
-macOS (instalación por `.pkg`):
+macOS (installed via `.pkg`):
 
 ```bash
 sudo launchctl unload /Library/LaunchDaemons/com.javiermugueta.linuxfsagent.plist 2>/dev/null || true
@@ -255,28 +255,28 @@ sudo rm -rf /usr/local/etc/linuxfsagent
 sudo rm -f /var/log/linuxfsagent.log
 ```
 
-macOS (uso desde tar.gz): borra la carpeta descomprimida y cualquier script/binario que hayas copiado manualmente.
+macOS (from tar.gz): remove the extracted folder and any manually copied binaries/scripts.
 
 Windows:
 
 ```powershell
-# desde la carpeta del paquete descomprimido:
-.\\uninstall-windows.ps1
+# from the extracted package folder:
+.\uninstall-windows.ps1
 ```
 
-Opciones útiles:
+Useful option:
 
 ```powershell
-.\\uninstall-windows.ps1 -KeepFiles
+.\uninstall-windows.ps1 -KeepFiles
 ```
 
-## Dimensiones enviadas por métrica
+## Metric Dimensions
 
 - `mount_point`
 - `fs_type`
 - `fs_name`
 
-## Notas
+## Notes
 
-- El cálculo de usado se hace con `Blocks - Bfree`, multiplicado por `Bsize`.
-- Se envían lotes de hasta 50 datapoints por request a OCI Monitoring.
+- Used space is calculated as `Blocks - Bfree`, multiplied by `Bsize`.
+- Up to 50 datapoints are sent per request to OCI Monitoring.
