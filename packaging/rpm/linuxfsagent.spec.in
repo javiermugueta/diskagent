@@ -1,0 +1,77 @@
+Name:           linuxfsagent
+Version:        __VERSION__
+Release:        1%{?dist}
+Summary:        Linux filesystem metrics agent for OCI Monitoring
+License:        Proprietary
+URL:            https://github.com/javiermugueta/diskagent
+BuildArch:      __RPM_ARCH__
+
+Source0:        linuxfsagent
+Source1:        run-linuxfsagent.sh
+Source2:        linuxfsagent.service
+Source3:        .env.example
+
+Requires(post): systemd
+Requires(preun): systemd
+Requires(postun): systemd
+
+%description
+linuxfsagent collects filesystem metrics (total bytes, used bytes, usage percent)
+and publishes them to OCI Monitoring and/or prints to stdout.
+
+%prep
+
+%build
+
+%install
+install -d -m 0755 %{buildroot}/opt/linuxfsagent
+install -m 0755 %{SOURCE0} %{buildroot}/opt/linuxfsagent/linuxfsagent
+install -m 0755 %{SOURCE1} %{buildroot}/opt/linuxfsagent/run-linuxfsagent.sh
+install -m 0640 %{SOURCE3} %{buildroot}/opt/linuxfsagent/.env.example
+
+install -d -m 0755 %{buildroot}/etc/systemd/system
+install -m 0644 %{SOURCE2} %{buildroot}/etc/systemd/system/linuxfsagent.service
+
+%pre
+if ! getent group opc >/dev/null 2>&1; then
+  groupadd -r opc >/dev/null 2>&1 || true
+fi
+if ! id -u opc >/dev/null 2>&1; then
+  useradd -r -g opc -d /opt/linuxfsagent -s /sbin/nologin opc >/dev/null 2>&1 || true
+fi
+exit 0
+
+%post
+chown -R opc:opc /opt/linuxfsagent >/dev/null 2>&1 || true
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl daemon-reload >/dev/null 2>&1 || true
+  if [ "$1" -eq 1 ]; then
+    systemctl enable --now linuxfsagent.service >/dev/null 2>&1 || true
+  else
+    systemctl try-restart linuxfsagent.service >/dev/null 2>&1 || true
+  fi
+fi
+exit 0
+
+%preun
+if [ "$1" -eq 0 ] && command -v systemctl >/dev/null 2>&1; then
+  systemctl disable --now linuxfsagent.service >/dev/null 2>&1 || true
+fi
+exit 0
+
+%postun
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+exit 0
+
+%files
+%dir /opt/linuxfsagent
+%attr(0755,root,root) /opt/linuxfsagent/linuxfsagent
+%attr(0755,root,root) /opt/linuxfsagent/run-linuxfsagent.sh
+%config(noreplace) %attr(0640,root,root) /opt/linuxfsagent/.env.example
+%config(noreplace) %attr(0644,root,root) /etc/systemd/system/linuxfsagent.service
+
+%changelog
+* Tue Apr 14 2026 Javier Mugueta <javiermugueta@gmail.com> - __VERSION__-1
+- Initial RPM package

@@ -11,13 +11,36 @@ fi
 
 "$ROOT/scripts/package_linux.sh" "$VERSION"
 
+if [[ "$(uname -s)" == "Linux" ]] && command -v rpmbuild >/dev/null 2>&1; then
+  "$ROOT/scripts/package_rpm.sh" "$VERSION" amd64
+  "$ROOT/scripts/package_rpm.sh" "$VERSION" arm64
+else
+  echo "Skipping RPM build (requires Linux + rpmbuild)."
+fi
+
 (
   cd "$ROOT/dist"
   rm -f checksums.txt
-  shasum -a 256 "linuxfsagent-${VERSION}-linux-amd64.tar.gz" "linuxfsagent-${VERSION}-linux-arm64.tar.gz" > checksums.txt
+  files=(
+    "linuxfsagent-${VERSION}-linux-amd64.tar.gz"
+    "linuxfsagent-${VERSION}-linux-arm64.tar.gz"
+  )
+  if [[ -f "linuxfsagent-${VERSION}-1.x86_64.rpm" ]]; then
+    files+=("linuxfsagent-${VERSION}-1.x86_64.rpm")
+  fi
+  if [[ -f "linuxfsagent-${VERSION}-1.aarch64.rpm" ]]; then
+    files+=("linuxfsagent-${VERSION}-1.aarch64.rpm")
+  fi
+  shasum -a 256 "${files[@]}" > checksums.txt
 )
 
 echo "Created:"
 ls -lh "$ROOT/dist/linuxfsagent-${VERSION}-linux-amd64.tar.gz" \
        "$ROOT/dist/linuxfsagent-${VERSION}-linux-arm64.tar.gz" \
        "$ROOT/dist/checksums.txt"
+if [[ -f "$ROOT/dist/linuxfsagent-${VERSION}-1.x86_64.rpm" ]]; then
+  ls -lh "$ROOT/dist/linuxfsagent-${VERSION}-1.x86_64.rpm"
+fi
+if [[ -f "$ROOT/dist/linuxfsagent-${VERSION}-1.aarch64.rpm" ]]; then
+  ls -lh "$ROOT/dist/linuxfsagent-${VERSION}-1.aarch64.rpm"
+fi

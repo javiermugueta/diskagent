@@ -21,6 +21,9 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install RPM tooling
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
       - name: Build release artifacts
         run: ./scripts/release_artifacts.sh "${GITHUB_REF_NAME}"
 
@@ -32,5 +35,7 @@ jobs:
           files: |
             dist/linuxfsagent-${{ github.ref_name }}-linux-amd64.tar.gz
             dist/linuxfsagent-${{ github.ref_name }}-linux-arm64.tar.gz
+            dist/linuxfsagent-${{ github.ref_name }}-1.x86_64.rpm
+            dist/linuxfsagent-${{ github.ref_name }}-1.aarch64.rpm
             dist/checksums.txt
             install.sh
