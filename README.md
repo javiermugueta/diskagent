@@ -98,6 +98,12 @@ Instalación directa desde endpoint:
 curl -fsSL https://raw.githubusercontent.com/javiermugueta/diskagent/v0.1.0/install.sh | sudo bash
 ```
 
+Si tu proxy bloquea `raw.githubusercontent.com`, usa assets del release (dominio `github.com`):
+
+```bash
+curl -L https://github.com/javiermugueta/diskagent/releases/download/v0.1.0/install.sh | sudo bash -- --version v0.1.0
+```
+
 Para instalar el último release publicado:
 
 ```bash
