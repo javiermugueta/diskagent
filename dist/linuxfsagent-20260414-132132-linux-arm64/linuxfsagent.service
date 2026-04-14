@@ -1,0 +1,22 @@
+[Unit]
+Description=Linux File System Metrics Agent (OCI Monitoring)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/linuxfsagent
+ExecStart=/opt/linuxfsagent/run-linuxfsagent.sh --interval 60s --output both
+Restart=always
+RestartSec=10
+EnvironmentFile=-/opt/linuxfsagent/.env
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/linuxfsagent
+
+[Install]
+WantedBy=multi-user.target
