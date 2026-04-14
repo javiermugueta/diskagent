@@ -9,204 +9,113 @@ Go agent for Linux, macOS, and Windows that:
 - Excludes pseudo/virtual filesystems by default (for example: `proc`, `sysfs`, `tmpfs`, `cgroup`, `overlay`)
 - Publishes metrics to Oracle Cloud Infrastructure Monitoring
 
-## Environment Variables
+## Installation (Quick Start)
 
-- `ORACLE_METRICS_NAMESPACE` (required if `--output=oci_metrics` or `--output=both`)
-- `ORACLE_COMPARTMENT_OCID` (required if `--output=oci_metrics` or `--output=both`)
-- `ORACLE_RESOURCE_GROUP` (optional)
-- `ORACLE_AUTH_MODE` (optional):
-  - `config` (default): uses `~/.oci/config`
-  - `instance_principal`: uses Instance Principal
+Use release assets from GitHub:
+- https://github.com/javiermugueta/diskagent/releases
 
-## Run
+### Linux
 
-```bash
-go mod tidy
-go run ./cmd/linuxfsagent --once
-```
-
-Output selector:
-
-```bash
-# OCI Monitoring only
-go run ./cmd/linuxfsagent --once --output oci_metrics
-
-# Standard output only (stdout)
-go run ./cmd/linuxfsagent --once --output stdout
-
-# Both destinations (default)
-go run ./cmd/linuxfsagent --once --output both
-```
-
-Daemon mode (every 60s by default):
-
-```bash
-go run ./cmd/linuxfsagent --interval 60s
-```
-
-Include pseudo/virtual filesystems:
-
-```bash
-go run ./cmd/linuxfsagent --once --include-pseudo-fs
-```
-
-## Linux Packaging
-
-Build Linux packages (`amd64` and `arm64`):
-
-```bash
-./scripts/package_linux.sh
-```
-
-Optional version argument:
-
-```bash
-./scripts/package_linux.sh v0.1.0
-```
-
-Output in `dist/`:
-
-- `linuxfsagent-<version>-linux-amd64.tar.gz`
-- `linuxfsagent-<version>-linux-arm64.tar.gz`
-
-Linux usage:
-
-```bash
-tar -xzf linuxfsagent-<version>-linux-amd64.tar.gz
-cd linuxfsagent-<version>-linux-amd64
-cp .env.example .env   # if OCI output will be used
-./run-linuxfsagent.sh --once --output stdout
-```
-
-## macOS Packaging
-
-Build macOS packages (`amd64` and `arm64`):
-
-```bash
-./scripts/package_macos.sh v0.1.0
-```
-
-Output in `dist/`:
-
-- `linuxfsagent-<version>-darwin-amd64.tar.gz`
-- `linuxfsagent-<version>-darwin-arm64.tar.gz`
-- `linuxfsagent-<version>-macos-universal.pkg` (with `./scripts/package_macos_pkg.sh <version>`)
-
-macOS usage:
-
-```bash
-tar -xzf linuxfsagent-<version>-darwin-arm64.tar.gz
-cd linuxfsagent-<version>-darwin-arm64
-./linuxfsagent --once --output stdout
-```
-
-Installable macOS package (`.pkg`):
-
-```bash
-./scripts/package_macos_pkg.sh v0.1.0
-sudo installer -pkg dist/linuxfsagent-v0.1.0-macos-universal.pkg -target /
-```
-
-The `.pkg` installs:
-
-- binary: `/usr/local/bin/linuxfsagent`
-- sample config: `/usr/local/etc/linuxfsagent/.env.example`
-- LaunchDaemon: `/Library/LaunchDaemons/com.javiermugueta.linuxfsagent.plist`
-
-## Windows Packaging
-
-Build Windows packages (`amd64` and `arm64`):
-
-```bash
-./scripts/package_windows.sh v0.1.0
-```
-
-Output in `dist/`:
-
-- `linuxfsagent-<version>-windows-amd64.zip`
-- `linuxfsagent-<version>-windows-arm64.zip`
-
-Each zip includes:
-
-- `linuxfsagent.exe`
-- `run-windows.ps1`
-- `install-windows.ps1`
-- `uninstall-windows.ps1`
-- `.env.example`
-
-Windows installation (PowerShell as Administrator):
-
-```powershell
-Expand-Archive .\linuxfsagent-v0.1.0-windows-amd64.zip -DestinationPath .\out -Force
-cd .\out\linuxfsagent-v0.1.0-windows-amd64
-Copy-Item .env.example .env
-.\install-windows.ps1
-```
-
-The installer creates a scheduled task (`linuxfsagent`) that starts on boot as `SYSTEM`.
-Default install directory:
-
-- `C:\ProgramData\linuxfsagent`
-
-## Release and Endpoint Installation (GitHub)
-
-Generate release artifacts + checksums:
-
-```bash
-./scripts/release_artifacts.sh v0.1.0
-```
-
-Upload these files to release `v0.1.0` on GitHub:
-
-- `dist/linuxfsagent-v0.1.0-linux-amd64.tar.gz`
-- `dist/linuxfsagent-v0.1.0-linux-arm64.tar.gz`
-- `dist/linuxfsagent-v0.1.0-darwin-amd64.tar.gz`
-- `dist/linuxfsagent-v0.1.0-darwin-arm64.tar.gz`
-- `dist/linuxfsagent-v0.1.0-windows-amd64.zip`
-- `dist/linuxfsagent-v0.1.0-windows-arm64.zip`
-- `dist/linuxfsagent-v0.1.0-macos-universal.pkg`
-- `dist/linuxfsagent-v0.1.0-1.x86_64.rpm` (if generated on Linux with `rpmbuild`)
-- `dist/linuxfsagent-v0.1.0-1.aarch64.rpm` (optional; depends on build host)
-- `dist/checksums.txt`
-
-Direct installation via endpoint:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/javiermugueta/diskagent/v0.1.0/install.sh | sudo bash
-```
-
-If your proxy blocks `raw.githubusercontent.com`, use release assets (`github.com`):
-
-```bash
-curl -L https://github.com/javiermugueta/diskagent/releases/download/v0.1.0/install.sh | sudo bash -- --version v0.1.0
-```
-
-Install latest published release:
+Option A: install via `install.sh`
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/javiermugueta/diskagent/main/install.sh | sudo bash
 ```
 
-RPM installation (Oracle Linux / RHEL):
+If your proxy blocks `raw.githubusercontent.com`:
 
 ```bash
-# if you have external repos with TLS issues, disable them in this command
-sudo dnf --disablerepo=docker-ce-stable localinstall -y ./linuxfsagent-v0.1.7-1.x86_64.rpm
-sudo systemctl status linuxfsagent
-journalctl -u linuxfsagent -f
+curl -L https://github.com/javiermugueta/diskagent/releases/download/v0.1.7/install.sh | sudo bash -- --version v0.1.7
 ```
 
-Install as `systemd` service (Linux target host):
+Option B: install from `.tar.gz`
 
 ```bash
+tar -xzf linuxfsagent-v0.1.7-linux-amd64.tar.gz
+cd linuxfsagent-v0.1.7-linux-amd64
+cp .env.example .env   # if OCI output will be used
 sudo ./install-systemd.sh
+```
+
+Option C: install from `RPM` (Oracle Linux / RHEL)
+
+```bash
+# disable problematic external repos if needed
+sudo dnf --disablerepo=docker-ce-stable localinstall -y ./linuxfsagent-v0.1.7-1.x86_64.rpm
+```
+
+### macOS
+
+Option A: install from `.pkg` (recommended)
+
+```bash
+sudo installer -pkg ./linuxfsagent-v0.1.7-macos-universal.pkg -target /
+```
+
+Option B: run from `.tar.gz`
+
+```bash
+tar -xzf linuxfsagent-v0.1.7-darwin-arm64.tar.gz
+cd linuxfsagent-v0.1.7-darwin-arm64
+./linuxfsagent --once --output stdout
+```
+
+### Windows
+
+Run in PowerShell as Administrator:
+
+```powershell
+Expand-Archive .\linuxfsagent-v0.1.7-windows-amd64.zip -DestinationPath .\out -Force
+cd .\out\linuxfsagent-v0.1.7-windows-amd64
+Copy-Item .env.example .env
+.\install-windows.ps1
+```
+
+This creates a scheduled task (`linuxfsagent`) that starts at boot as `SYSTEM`.
+Default install directory:
+
+- `C:\ProgramData\linuxfsagent`
+
+## Configuration
+
+Environment variables used when `--output=oci_metrics` or `--output=both`:
+
+- `ORACLE_METRICS_NAMESPACE` (required)
+- `ORACLE_COMPARTMENT_OCID` (required)
+- `ORACLE_RESOURCE_GROUP` (optional)
+- `ORACLE_AUTH_MODE` (optional):
+  - `config` (default): uses `~/.oci/config`
+  - `instance_principal`: uses Instance Principal
+
+## Runtime Options
+
+```bash
+# OCI Monitoring only
+go run ./cmd/linuxfsagent --once --output oci_metrics
+
+# Standard output only
+go run ./cmd/linuxfsagent --once --output stdout
+
+# Both destinations (default)
+go run ./cmd/linuxfsagent --once --output both
+
+# Daemon mode (every 60s)
+go run ./cmd/linuxfsagent --interval 60s
+
+# Include pseudo/virtual filesystems
+go run ./cmd/linuxfsagent --once --include-pseudo-fs
+```
+
+## Verify Installation
+
+### Linux (`systemd`)
+
+```bash
 sudo systemctl status linuxfsagent
 journalctl -u linuxfsagent -f
 ```
 
-The service runs as user/group `opc`, and the installer sets ownership of `/opt/linuxfsagent` to `opc:opc`.
-
-If you need to change flags (for example `--output stdout`), edit:
+To change runtime flags, edit:
 
 - `/etc/systemd/system/linuxfsagent.service`
 
@@ -217,20 +126,30 @@ sudo systemctl daemon-reload
 sudo systemctl restart linuxfsagent
 ```
 
-On macOS, if installed via `.pkg`, the `LaunchDaemon` starts automatically and writes logs to:
+### macOS (`launchd`)
 
-- `/var/log/linuxfsagent.log`
+The `.pkg` installs:
 
-Useful macOS commands:
+- binary: `/usr/local/bin/linuxfsagent`
+- sample config: `/usr/local/etc/linuxfsagent/.env.example`
+- LaunchDaemon: `/Library/LaunchDaemons/com.javiermugueta.linuxfsagent.plist`
+
+Check status/logs:
 
 ```bash
 sudo launchctl list | grep com.javiermugueta.linuxfsagent
 tail -f /var/log/linuxfsagent.log
 ```
 
+### Windows (Scheduled Task)
+
+```powershell
+Get-ScheduledTask -TaskName linuxfsagent | Get-ScheduledTaskInfo
+```
+
 ## Uninstall
 
-Linux (installed via `install-systemd.sh`):
+### Linux (installed via `install-systemd.sh`)
 
 ```bash
 sudo systemctl disable --now linuxfsagent || true
@@ -239,13 +158,13 @@ sudo systemctl daemon-reload
 sudo rm -rf /opt/linuxfsagent
 ```
 
-Linux (installed via RPM):
+### Linux (installed via RPM)
 
 ```bash
 sudo dnf remove -y linuxfsagent
 ```
 
-macOS (installed via `.pkg`):
+### macOS (installed via `.pkg`)
 
 ```bash
 sudo launchctl unload /Library/LaunchDaemons/com.javiermugueta.linuxfsagent.plist 2>/dev/null || true
@@ -255,20 +174,50 @@ sudo rm -rf /usr/local/etc/linuxfsagent
 sudo rm -f /var/log/linuxfsagent.log
 ```
 
-macOS (from tar.gz): remove the extracted folder and any manually copied binaries/scripts.
+macOS (from `.tar.gz`): remove the extracted folder and any manually copied binaries/scripts.
 
-Windows:
+### Windows
+
+From the extracted package folder:
 
 ```powershell
-# from the extracted package folder:
 .\uninstall-windows.ps1
 ```
 
-Useful option:
+Keep files but remove scheduled task only:
 
 ```powershell
 .\uninstall-windows.ps1 -KeepFiles
 ```
+
+## Build and Packaging (From Source)
+
+```bash
+# Linux tar.gz
+./scripts/package_linux.sh v0.1.0
+
+# macOS tar.gz
+./scripts/package_macos.sh v0.1.0
+
+# macOS universal pkg (must run on macOS)
+./scripts/package_macos_pkg.sh v0.1.0
+
+# Windows zip
+./scripts/package_windows.sh v0.1.0
+
+# Linux RPM (must run on Linux with rpmbuild)
+./scripts/package_rpm.sh v0.1.0 amd64
+```
+
+## Release Process
+
+Generate release artifacts + checksums:
+
+```bash
+./scripts/release_artifacts.sh v0.1.0
+```
+
+Expected artifacts include Linux/macOS/Windows packages, optional RPMs, and `checksums.txt`.
 
 ## Metric Dimensions
 
