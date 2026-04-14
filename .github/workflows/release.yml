@@ -40,3 +40,26 @@ jobs:
             dist/linuxfsagent-${{ github.ref_name }}-1.x86_64.rpm
             dist/checksums.txt
             install.sh
+
+  release-macos-pkg:
+    runs-on: macos-latest
+    needs: release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build macOS PKG
+        run: ./scripts/package_macos_pkg.sh "${GITHUB_REF_NAME}"
+
+      - name: Upload PKG to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            dist/linuxfsagent-${{ github.ref_name }}-macos-universal.pkg

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PLIST="/Library/LaunchDaemons/com.javiermugueta.linuxfsagent.plist"
+
+if [[ -f "$PLIST" ]]; then
+  chown root:wheel "$PLIST"
+  chmod 0644 "$PLIST"
+fi
+
+if command -v launchctl >/dev/null 2>&1; then
+  launchctl unload "$PLIST" >/dev/null 2>&1 || true
+  launchctl load "$PLIST" >/dev/null 2>&1 || true
+fi
+
+exit 0

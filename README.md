@@ -90,6 +90,7 @@ Salida en `dist/`:
 
 - `linuxfsagent-<version>-darwin-amd64.tar.gz`
 - `linuxfsagent-<version>-darwin-arm64.tar.gz`
+- `linuxfsagent-<version>-macos-universal.pkg` (con `./scripts/package_macos_pkg.sh <version>`)
 
 Uso en macOS:
 
@@ -98,6 +99,19 @@ tar -xzf linuxfsagent-<version>-darwin-arm64.tar.gz
 cd linuxfsagent-<version>-darwin-arm64
 ./linuxfsagent --once --output stdout
 ```
+
+Empaquetado instalable (`.pkg`) en macOS:
+
+```bash
+./scripts/package_macos_pkg.sh v0.1.0
+sudo installer -pkg dist/linuxfsagent-v0.1.0-macos-universal.pkg -target /
+```
+
+El `.pkg` instala:
+
+- binario: `/usr/local/bin/linuxfsagent`
+- ejemplo de config: `/usr/local/etc/linuxfsagent/.env.example`
+- LaunchDaemon: `/Library/LaunchDaemons/com.javiermugueta.linuxfsagent.plist`
 
 ## Release e instalación por endpoint (GitHub)
 
@@ -113,6 +127,7 @@ Sube estos archivos al release `v0.1.0` en GitHub:
 - `dist/linuxfsagent-v0.1.0-linux-arm64.tar.gz`
 - `dist/linuxfsagent-v0.1.0-darwin-amd64.tar.gz`
 - `dist/linuxfsagent-v0.1.0-darwin-arm64.tar.gz`
+- `dist/linuxfsagent-v0.1.0-macos-universal.pkg`
 - `dist/linuxfsagent-v0.1.0-1.x86_64.rpm` (si se genera en Linux con `rpmbuild`)
 - `dist/linuxfsagent-v0.1.0-1.aarch64.rpm` (opcional, depende del host de build)
 - `dist/checksums.txt`
