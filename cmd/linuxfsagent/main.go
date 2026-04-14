@@ -16,6 +16,13 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "setup" {
+		if err := runSetup(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
 	interval := flag.Duration("interval", 60*time.Second, "Intervalo de publicación")
 	once := flag.Bool("once", false, "Ejecuta una sola iteración")
 	output := flag.String("output", "both", "Destino de salida: oci_metrics | stdout | both")

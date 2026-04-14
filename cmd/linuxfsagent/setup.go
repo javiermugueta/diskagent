@@ -1,0 +1,330 @@
+package main
+
+import (
+	"bufio"
+	"errors"
+	"flag"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"strings"
+)
+
+type setupConfig struct {
+	Namespace     string
+	CompartmentID string
+	ResourceGroup string
+	AuthMode      string
+	OutputMode    string
+}
+
+func runSetup(args []string) error {
+	fs := flag.NewFlagSet("setup", flag.ContinueOnError)
+	envPathOverride := fs.String("env-file", "", "Path to write .env (optional override)")
+	noRestart := fs.Bool("no-restart", false, "Do not prompt to restart service/task")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	envPath := defaultEnvPath()
+	if strings.TrimSpace(*envPathOverride) != "" {
+		envPath = *envPathOverride
+	}
+	existing := map[string]string{}
+	if kv, err := readEnvFile(envPath); err == nil {
+		existing = kv
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("diskagent interactive setup")
+	fmt.Printf("Operating system: %s\n", runtime.GOOS)
+	fmt.Printf("Environment file: %s\n\n", envPath)
+
+	cfg := setupConfig{}
+	cfg.OutputMode = promptChoice(reader, "Output mode", []string{"stdout", "oci_metrics", "both"}, firstNonEmpty(existing["DISKAGENT_OUTPUT_MODE"], "both"))
+
+	requiresOCI := cfg.OutputMode == "oci_metrics" || cfg.OutputMode == "both"
+	if requiresOCI {
+		cfg.Namespace = promptRequired(reader, "ORACLE_METRICS_NAMESPACE", existing["ORACLE_METRICS_NAMESPACE"])
+		cfg.CompartmentID = promptRequired(reader, "ORACLE_COMPARTMENT_OCID", existing["ORACLE_COMPARTMENT_OCID"])
+		if !isCompartmentOCID(cfg.CompartmentID) {
+			return errors.New("ORACLE_COMPARTMENT_OCID must start with 'ocid1.compartment.'")
+		}
+		cfg.ResourceGroup = promptOptional(reader, "ORACLE_RESOURCE_GROUP", existing["ORACLE_RESOURCE_GROUP"])
+		cfg.AuthMode = promptChoice(reader, "ORACLE_AUTH_MODE", []string{"config", "instance_principal"}, firstNonEmpty(existing["ORACLE_AUTH_MODE"], "config"))
+	} else {
+		cfg.Namespace = firstNonEmpty(existing["ORACLE_METRICS_NAMESPACE"], "")
+		cfg.CompartmentID = firstNonEmpty(existing["ORACLE_COMPARTMENT_OCID"], "")
+		cfg.ResourceGroup = firstNonEmpty(existing["ORACLE_RESOURCE_GROUP"], "")
+		cfg.AuthMode = firstNonEmpty(existing["ORACLE_AUTH_MODE"], "config")
+	}
+
+	if err := writeEnvConfig(envPath, cfg); err != nil {
+		if errors.Is(err, os.ErrPermission) || strings.Contains(strings.ToLower(err.Error()), "permission denied") {
+			return fmt.Errorf("%w (try elevated privileges or use --env-file)", err)
+		}
+		return err
+	}
+	fmt.Printf("\nSaved configuration to %s\n", envPath)
+
+	if cfg.OutputMode != "stdout" {
+		if err := applyServiceOutputMode(cfg.OutputMode); err != nil {
+			fmt.Printf("Warning: could not update service output mode automatically: %v\n", err)
+		}
+	}
+
+	if !*noRestart && askYesNo(reader, "Try restarting service/task now", true) {
+		if err := restartRuntime(); err != nil {
+			fmt.Printf("Warning: restart failed: %v\n", err)
+		}
+	}
+
+	printNextSteps(cfg.OutputMode)
+	return nil
+}
+
+func defaultEnvPath() string {
+	switch runtime.GOOS {
+	case "linux":
+		return "/opt/linuxfsagent/.env"
+	case "darwin":
+		return "/usr/local/etc/linuxfsagent/.env"
+	case "windows":
+		pd := os.Getenv("ProgramData")
+		if pd == "" {
+			pd = `C:\ProgramData`
+		}
+		return filepath.Join(pd, "linuxfsagent", ".env")
+	default:
+		return ".env"
+	}
+}
+
+func promptRequired(r *bufio.Reader, key, def string) string {
+	for {
+		v := promptOptional(r, key, def)
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+		fmt.Printf("%s is required.\n", key)
+	}
+}
+
+func promptOptional(r *bufio.Reader, key, def string) string {
+	if def != "" {
+		fmt.Printf("%s [%s]: ", key, def)
+	} else {
+		fmt.Printf("%s: ", key)
+	}
+	line, _ := r.ReadString('\n')
+	v := strings.TrimSpace(line)
+	if v == "" {
+		return def
+	}
+	return v
+}
+
+func promptChoice(r *bufio.Reader, label string, options []string, def string) string {
+	for {
+		fmt.Printf("%s (%s) [%s]: ", label, strings.Join(options, "/"), def)
+		line, _ := r.ReadString('\n')
+		v := strings.TrimSpace(strings.ToLower(line))
+		if v == "" {
+			return def
+		}
+		for _, op := range options {
+			if v == op {
+				return v
+			}
+		}
+		fmt.Printf("Invalid value. Allowed: %s\n", strings.Join(options, ", "))
+	}
+}
+
+func askYesNo(r *bufio.Reader, label string, defYes bool) bool {
+	def := "y/N"
+	if defYes {
+		def = "Y/n"
+	}
+	for {
+		fmt.Printf("%s [%s]: ", label, def)
+		line, _ := r.ReadString('\n')
+		v := strings.TrimSpace(strings.ToLower(line))
+		switch v {
+		case "":
+			return defYes
+		case "y", "yes", "s", "si":
+			return true
+		case "n", "no":
+			return false
+		default:
+			fmt.Println("Please answer y or n.")
+		}
+	}
+}
+
+func isCompartmentOCID(v string) bool {
+	return strings.HasPrefix(strings.TrimSpace(v), "ocid1.compartment.")
+}
+
+func writeEnvConfig(path string, cfg setupConfig) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create env directory: %w", err)
+	}
+
+	lines := []string{
+		"# Generated by: linuxfsagent setup",
+		"DISKAGENT_OUTPUT_MODE=" + cfg.OutputMode,
+	}
+	if cfg.Namespace != "" {
+		lines = append(lines, "ORACLE_METRICS_NAMESPACE="+cfg.Namespace)
+	}
+	if cfg.CompartmentID != "" {
+		lines = append(lines, "ORACLE_COMPARTMENT_OCID="+cfg.CompartmentID)
+	}
+	if cfg.ResourceGroup != "" {
+		lines = append(lines, "ORACLE_RESOURCE_GROUP="+cfg.ResourceGroup)
+	}
+	if cfg.AuthMode != "" {
+		lines = append(lines, "ORACLE_AUTH_MODE="+cfg.AuthMode)
+	}
+	content := strings.Join(lines, "\n") + "\n"
+
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, []byte(content), 0o640); err != nil {
+		return fmt.Errorf("write temp env file: %w", err)
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return fmt.Errorf("replace env file: %w", err)
+	}
+	return nil
+}
+
+func readEnvFile(path string) (map[string]string, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]string{}
+	for _, raw := range strings.Split(string(b), "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		out[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+	}
+	return out, nil
+}
+
+func applyServiceOutputMode(mode string) error {
+	switch runtime.GOOS {
+	case "linux":
+		return rewriteFileIfExists("/etc/systemd/system/linuxfsagent.service", mode)
+	case "darwin":
+		return rewritePlistOutputIfExists("/Library/LaunchDaemons/com.javiermugueta.linuxfsagent.plist", mode)
+	case "windows":
+		return nil
+	default:
+		return nil
+	}
+}
+
+func rewriteFileIfExists(path, mode string) error {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	re := regexp.MustCompile(`--output\s+\w+`)
+	s := string(b)
+	if !re.MatchString(s) {
+		return nil
+	}
+	ns := re.ReplaceAllString(s, "--output "+mode)
+	if ns == s {
+		return nil
+	}
+	return os.WriteFile(path, []byte(ns), 0o644)
+}
+
+func rewritePlistOutputIfExists(path, mode string) error {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	re := regexp.MustCompile(`(?s)<string>--output</string>\s*<string>[^<]+</string>`)
+	s := string(b)
+	if !re.MatchString(s) {
+		return nil
+	}
+	ns := re.ReplaceAllString(s, "<string>--output</string>\n    <string>"+mode+"</string>")
+	if ns == s {
+		return nil
+	}
+	return os.WriteFile(path, []byte(ns), 0o644)
+}
+
+func restartRuntime() error {
+	switch runtime.GOOS {
+	case "linux":
+		if err := runCmd("systemctl", "daemon-reload"); err != nil {
+			return err
+		}
+		return runCmd("systemctl", "restart", "linuxfsagent")
+	case "darwin":
+		plist := "/Library/LaunchDaemons/com.javiermugueta.linuxfsagent.plist"
+		_ = runCmd("launchctl", "unload", plist)
+		return runCmd("launchctl", "load", plist)
+	case "windows":
+		if err := runCmd("schtasks", "/End", "/TN", "linuxfsagent"); err != nil {
+			_ = err
+		}
+		return runCmd("schtasks", "/Run", "/TN", "linuxfsagent")
+	default:
+		return nil
+	}
+}
+
+func runCmd(name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s %s: %w", name, strings.Join(args, " "), err)
+	}
+	return nil
+}
+
+func printNextSteps(output string) {
+	fmt.Println("\nSetup completed.")
+	fmt.Printf("Selected output mode: %s\n", output)
+	if output == "stdout" {
+		fmt.Println("OCI variables were not required because output is stdout.")
+	} else {
+		fmt.Println("OCI variables were persisted to the .env file for your platform.")
+	}
+	if runtime.GOOS == "windows" {
+		fmt.Println("Note: if your Scheduled Task still has --output stdout, update task arguments manually if needed.")
+	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}

@@ -92,6 +92,40 @@ Variables:
   - `config` (default): uses `~/.oci/config`
   - `instance_principal`: uses Instance Principal
 
+### Interactive setup wizard
+
+You can configure OCI interactively with:
+
+```bash
+linuxfsagent setup
+```
+
+What it does:
+- asks for `output` mode (`stdout`, `oci_metrics`, `both`)
+- asks OCI variables when needed
+- writes a persistent `.env` file to the platform default path
+- tries to update service output mode on Linux/macOS if installed
+- optionally restarts the service/task
+
+Default `.env` path by OS:
+- Linux: `/opt/linuxfsagent/.env`
+- macOS: `/usr/local/etc/linuxfsagent/.env`
+- Windows: `C:\\ProgramData\\linuxfsagent\\.env`
+
+Useful options:
+
+```bash
+# write to a custom env path (useful for testing)
+linuxfsagent setup --env-file ./my.env
+
+# configure but do not restart runtime automatically
+linuxfsagent setup --no-restart
+```
+
+Notes:
+- On Linux/macOS, writing to default system paths usually requires elevated privileges.
+- On Windows, the wizard can save `.env`, but Scheduled Task arguments may still need manual update depending on how it was installed.
+
 ### When to set them
 
 - Set them before first run if you want OCI publishing.
@@ -148,6 +182,9 @@ and restart the scheduled task.
 ## Runtime Options
 
 ```bash
+# interactive OCI setup
+go run ./cmd/linuxfsagent setup
+
 # OCI Monitoring only
 go run ./cmd/linuxfsagent --once --output oci_metrics
 
