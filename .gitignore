@@ -1,0 +1,5 @@
+# Build/release artifacts
+dist/
+
+# Local environment files
+.env

@@ -78,6 +78,32 @@ cp .env.example .env   # si usarás salida OCI
 ./run-linuxfsagent.sh --once --output stdout
 ```
 
+## Release e instalación por endpoint (GitHub)
+
+Generar artefactos de release + checksums:
+
+```bash
+./scripts/release_artifacts.sh v0.1.0
+```
+
+Sube estos archivos al release `v0.1.0` en GitHub:
+
+- `dist/linuxfsagent-v0.1.0-linux-amd64.tar.gz`
+- `dist/linuxfsagent-v0.1.0-linux-arm64.tar.gz`
+- `dist/checksums.txt`
+
+Instalación directa desde endpoint:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/javiermugueta/diskagent/v0.1.0/install.sh | sudo bash
+```
+
+Para instalar el último release publicado:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/javiermugueta/diskagent/main/install.sh | sudo bash
+```
+
 Instalar como servicio `systemd` (en la máquina Linux destino):
 
 ```bash
