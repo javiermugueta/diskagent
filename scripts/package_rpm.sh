@@ -41,8 +41,11 @@ trap 'rm -rf "$TOPDIR"' EXIT
 
 mkdir -p "$TOPDIR"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS} "$DIST_DIR"
 
-CGO_ENABLED=0 GOOS=linux GOARCH="$GOARCH" \
-  go build -trimpath -ldflags='-s -w' -o "$TOPDIR/SOURCES/linuxfsagent" "$ROOT/cmd/linuxfsagent"
+(
+  cd "$ROOT"
+  CGO_ENABLED=0 GOOS=linux GOARCH="$GOARCH" \
+    go build -trimpath -ldflags='-s -w' -o "$TOPDIR/SOURCES/linuxfsagent" ./cmd/linuxfsagent
+)
 
 cp "$ROOT/packaging/run-linuxfsagent.sh" "$TOPDIR/SOURCES/run-linuxfsagent.sh"
 cp "$ROOT/packaging/linuxfsagent.service" "$TOPDIR/SOURCES/linuxfsagent.service"
