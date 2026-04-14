@@ -153,7 +153,8 @@ curl -fsSL https://raw.githubusercontent.com/javiermugueta/diskagent/main/instal
 Instalacion con RPM (Oracle Linux / RHEL):
 
 ```bash
-sudo dnf localinstall -y ./linuxfsagent-v0.1.1-1.x86_64.rpm
+# si tienes repos externos con problemas TLS, desactívalos en este comando
+sudo dnf --disablerepo=docker-ce-stable localinstall -y ./linuxfsagent-v0.1.6-1.x86_64.rpm
 sudo systemctl status linuxfsagent
 journalctl -u linuxfsagent -f
 ```
@@ -178,6 +179,46 @@ Y recarga:
 sudo systemctl daemon-reload
 sudo systemctl restart linuxfsagent
 ```
+
+En macOS, si instalas con `.pkg`, el `LaunchDaemon` se carga automáticamente y escribe logs en:
+
+- `/var/log/linuxfsagent.log`
+
+Comandos útiles en macOS:
+
+```bash
+sudo launchctl list | grep com.javiermugueta.linuxfsagent
+tail -f /var/log/linuxfsagent.log
+```
+
+## Desinstalación
+
+Linux (instalación por `install-systemd.sh`):
+
+```bash
+sudo systemctl disable --now linuxfsagent || true
+sudo rm -f /etc/systemd/system/linuxfsagent.service
+sudo systemctl daemon-reload
+sudo rm -rf /opt/linuxfsagent
+```
+
+Linux (instalación por RPM):
+
+```bash
+sudo dnf remove -y linuxfsagent
+```
+
+macOS (instalación por `.pkg`):
+
+```bash
+sudo launchctl unload /Library/LaunchDaemons/com.javiermugueta.linuxfsagent.plist 2>/dev/null || true
+sudo rm -f /Library/LaunchDaemons/com.javiermugueta.linuxfsagent.plist
+sudo rm -f /usr/local/bin/linuxfsagent
+sudo rm -rf /usr/local/etc/linuxfsagent
+sudo rm -f /var/log/linuxfsagent.log
+```
+
+macOS (uso desde tar.gz): borra la carpeta descomprimida y cualquier script/binario que hayas copiado manualmente.
 
 ## Dimensiones enviadas por métrica
 
