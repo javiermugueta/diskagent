@@ -1,7 +1,7 @@
-# diskagent (Linux)
+# diskagent (Linux/macOS)
 
-Agente en Go para Linux que:
-- Detecta filesystems montados leyendo `/proc/self/mountinfo`
+Agente en Go para Linux y macOS que:
+- Detecta filesystems montados de forma nativa por SO (Linux: `/proc/self/mountinfo`, macOS: `getfsstat`)
 - Calcula por mountpoint:
   - `filesystem_total_bytes`
   - `filesystem_used_bytes`
@@ -78,6 +78,27 @@ cp .env.example .env   # si usarás salida OCI
 ./run-linuxfsagent.sh --once --output stdout
 ```
 
+## Empaquetado para macOS
+
+Genera paquetes para macOS (`amd64` y `arm64`):
+
+```bash
+./scripts/package_macos.sh v0.1.0
+```
+
+Salida en `dist/`:
+
+- `linuxfsagent-<version>-darwin-amd64.tar.gz`
+- `linuxfsagent-<version>-darwin-arm64.tar.gz`
+
+Uso en macOS:
+
+```bash
+tar -xzf linuxfsagent-<version>-darwin-arm64.tar.gz
+cd linuxfsagent-<version>-darwin-arm64
+./linuxfsagent --once --output stdout
+```
+
 ## Release e instalación por endpoint (GitHub)
 
 Generar artefactos de release + checksums:
@@ -90,6 +111,8 @@ Sube estos archivos al release `v0.1.0` en GitHub:
 
 - `dist/linuxfsagent-v0.1.0-linux-amd64.tar.gz`
 - `dist/linuxfsagent-v0.1.0-linux-arm64.tar.gz`
+- `dist/linuxfsagent-v0.1.0-darwin-amd64.tar.gz`
+- `dist/linuxfsagent-v0.1.0-darwin-arm64.tar.gz`
 - `dist/linuxfsagent-v0.1.0-1.x86_64.rpm` (si se genera en Linux con `rpmbuild`)
 - `dist/linuxfsagent-v0.1.0-1.aarch64.rpm` (opcional, depende del host de build)
 - `dist/checksums.txt`

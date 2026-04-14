@@ -10,6 +10,7 @@ if [[ -z "$VERSION" ]]; then
 fi
 
 "$ROOT/scripts/package_linux.sh" "$VERSION"
+"$ROOT/scripts/package_macos.sh" "$VERSION"
 
 if [[ "$(uname -s)" == "Linux" ]] && command -v rpmbuild >/dev/null 2>&1; then
   "$ROOT/scripts/package_rpm.sh" "$VERSION" amd64
@@ -26,6 +27,8 @@ fi
   files=(
     "linuxfsagent-${VERSION}-linux-amd64.tar.gz"
     "linuxfsagent-${VERSION}-linux-arm64.tar.gz"
+    "linuxfsagent-${VERSION}-darwin-amd64.tar.gz"
+    "linuxfsagent-${VERSION}-darwin-arm64.tar.gz"
   )
   if [[ -f "linuxfsagent-${VERSION}-1.x86_64.rpm" ]]; then
     files+=("linuxfsagent-${VERSION}-1.x86_64.rpm")
@@ -39,6 +42,8 @@ fi
 echo "Created:"
 ls -lh "$ROOT/dist/linuxfsagent-${VERSION}-linux-amd64.tar.gz" \
        "$ROOT/dist/linuxfsagent-${VERSION}-linux-arm64.tar.gz" \
+       "$ROOT/dist/linuxfsagent-${VERSION}-darwin-amd64.tar.gz" \
+       "$ROOT/dist/linuxfsagent-${VERSION}-darwin-arm64.tar.gz" \
        "$ROOT/dist/checksums.txt"
 if [[ -f "$ROOT/dist/linuxfsagent-${VERSION}-1.x86_64.rpm" ]]; then
   ls -lh "$ROOT/dist/linuxfsagent-${VERSION}-1.x86_64.rpm"

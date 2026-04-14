@@ -43,7 +43,7 @@ func main() {
 	defer cancel()
 
 	run := func() error {
-		metrics, err := collector.CollectLinuxFSMetrics(collector.CollectOptions{
+		metrics, err := collector.CollectFSMetrics(collector.CollectOptions{
 			ExcludePseudoFS: !*includePseudoFS,
 		})
 		if err != nil {
