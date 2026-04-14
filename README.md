@@ -78,7 +78,12 @@ Default install directory:
 
 ## Configuration
 
-Environment variables used when `--output=oci_metrics` or `--output=both`:
+Environment variables are required only when the agent sends metrics to OCI:
+- required for `--output=oci_metrics`
+- required for `--output=both`
+- not required for `--output=stdout`
+
+Variables:
 
 - `ORACLE_METRICS_NAMESPACE` (required)
 - `ORACLE_COMPARTMENT_OCID` (required)
@@ -86,6 +91,59 @@ Environment variables used when `--output=oci_metrics` or `--output=both`:
 - `ORACLE_AUTH_MODE` (optional):
   - `config` (default): uses `~/.oci/config`
   - `instance_principal`: uses Instance Principal
+
+### When to set them
+
+- Set them before first run if you want OCI publishing.
+- If you run `stdout` only, you can skip them.
+
+### Persistence model
+
+- `export VAR=...` in a shell is temporary (only current session/process tree).
+- Service/task config files are persistent across reboots.
+
+### Linux (`systemd`) persistence
+
+Use `/opt/linuxfsagent/.env` (persistent; loaded by `run-linuxfsagent.sh`):
+
+```bash
+sudo tee /opt/linuxfsagent/.env >/dev/null <<'EOF'
+ORACLE_METRICS_NAMESPACE=your_namespace
+ORACLE_COMPARTMENT_OCID=ocid1.compartment...
+# optional:
+# ORACLE_RESOURCE_GROUP=disk-agent
+# ORACLE_AUTH_MODE=instance_principal
+EOF
+```
+
+Then ensure service output mode uses OCI (`oci_metrics` or `both`) and restart:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart linuxfsagent
+```
+
+### macOS (`launchd`) persistence
+
+Default `.pkg` service uses `--output stdout`. For OCI mode, define environment
+variables in the LaunchDaemon plist (or wrap execution with a script that exports
+them), then reload the daemon.
+
+### Windows (Scheduled Task) persistence
+
+Use `C:\ProgramData\linuxfsagent\.env` (persistent; loaded by `run-windows.ps1`):
+
+```powershell
+@'
+ORACLE_METRICS_NAMESPACE=your_namespace
+ORACLE_COMPARTMENT_OCID=ocid1.compartment...
+# ORACLE_RESOURCE_GROUP=disk-agent
+# ORACLE_AUTH_MODE=instance_principal
+'@ | Set-Content C:\ProgramData\linuxfsagent\.env
+```
+
+Then update task arguments to `--output oci_metrics` or `--output both` if needed,
+and restart the scheduled task.
 
 ## Runtime Options
 
