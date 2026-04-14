@@ -37,6 +37,8 @@ jobs:
             dist/linuxfsagent-${{ github.ref_name }}-linux-arm64.tar.gz
             dist/linuxfsagent-${{ github.ref_name }}-darwin-amd64.tar.gz
             dist/linuxfsagent-${{ github.ref_name }}-darwin-arm64.tar.gz
+            dist/linuxfsagent-${{ github.ref_name }}-windows-amd64.zip
+            dist/linuxfsagent-${{ github.ref_name }}-windows-arm64.zip
             dist/linuxfsagent-${{ github.ref_name }}-1.x86_64.rpm
             dist/checksums.txt
             install.sh

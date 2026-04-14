@@ -113,6 +113,41 @@ El `.pkg` instala:
 - ejemplo de config: `/usr/local/etc/linuxfsagent/.env.example`
 - LaunchDaemon: `/Library/LaunchDaemons/com.javiermugueta.linuxfsagent.plist`
 
+## Empaquetado para Windows
+
+Genera paquetes para Windows (`amd64` y `arm64`):
+
+```bash
+./scripts/package_windows.sh v0.1.0
+```
+
+Salida en `dist/`:
+
+- `linuxfsagent-<version>-windows-amd64.zip`
+- `linuxfsagent-<version>-windows-arm64.zip`
+
+Cada `zip` incluye:
+
+- `linuxfsagent.exe`
+- `run-windows.ps1`
+- `install-windows.ps1`
+- `uninstall-windows.ps1`
+- `.env.example`
+
+Instalación en Windows (PowerShell como Administrator):
+
+```powershell
+Expand-Archive .\\linuxfsagent-v0.1.0-windows-amd64.zip -DestinationPath .\\out -Force
+cd .\\out\\linuxfsagent-v0.1.0-windows-amd64
+Copy-Item .env.example .env
+.\\install-windows.ps1
+```
+
+El instalador crea una tarea programada (`linuxfsagent`) que arranca al inicio como `SYSTEM`.
+El directorio por defecto de instalación es:
+
+- `C:\\ProgramData\\linuxfsagent`
+
 ## Release e instalación por endpoint (GitHub)
 
 Generar artefactos de release + checksums:
@@ -127,6 +162,8 @@ Sube estos archivos al release `v0.1.0` en GitHub:
 - `dist/linuxfsagent-v0.1.0-linux-arm64.tar.gz`
 - `dist/linuxfsagent-v0.1.0-darwin-amd64.tar.gz`
 - `dist/linuxfsagent-v0.1.0-darwin-arm64.tar.gz`
+- `dist/linuxfsagent-v0.1.0-windows-amd64.zip`
+- `dist/linuxfsagent-v0.1.0-windows-arm64.zip`
 - `dist/linuxfsagent-v0.1.0-macos-universal.pkg`
 - `dist/linuxfsagent-v0.1.0-1.x86_64.rpm` (si se genera en Linux con `rpmbuild`)
 - `dist/linuxfsagent-v0.1.0-1.aarch64.rpm` (opcional, depende del host de build)
@@ -219,6 +256,19 @@ sudo rm -f /var/log/linuxfsagent.log
 ```
 
 macOS (uso desde tar.gz): borra la carpeta descomprimida y cualquier script/binario que hayas copiado manualmente.
+
+Windows:
+
+```powershell
+# desde la carpeta del paquete descomprimido:
+.\\uninstall-windows.ps1
+```
+
+Opciones útiles:
+
+```powershell
+.\\uninstall-windows.ps1 -KeepFiles
+```
 
 ## Dimensiones enviadas por métrica
 
