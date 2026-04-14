@@ -36,6 +36,5 @@ jobs:
             dist/linuxfsagent-${{ github.ref_name }}-linux-amd64.tar.gz
             dist/linuxfsagent-${{ github.ref_name }}-linux-arm64.tar.gz
             dist/linuxfsagent-${{ github.ref_name }}-1.x86_64.rpm
-            dist/linuxfsagent-${{ github.ref_name }}-1.aarch64.rpm
             dist/checksums.txt
             install.sh

@@ -13,7 +13,9 @@ fi
 
 if [[ "$(uname -s)" == "Linux" ]] && command -v rpmbuild >/dev/null 2>&1; then
   "$ROOT/scripts/package_rpm.sh" "$VERSION" amd64
-  "$ROOT/scripts/package_rpm.sh" "$VERSION" arm64
+  if ! "$ROOT/scripts/package_rpm.sh" "$VERSION" arm64; then
+    echo "Skipping arm64 RPM (build host/toolchain does not support aarch64 target)."
+  fi
 else
   echo "Skipping RPM build (requires Linux + rpmbuild)."
 fi

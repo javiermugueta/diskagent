@@ -91,7 +91,7 @@ Sube estos archivos al release `v0.1.0` en GitHub:
 - `dist/linuxfsagent-v0.1.0-linux-amd64.tar.gz`
 - `dist/linuxfsagent-v0.1.0-linux-arm64.tar.gz`
 - `dist/linuxfsagent-v0.1.0-1.x86_64.rpm` (si se genera en Linux con `rpmbuild`)
-- `dist/linuxfsagent-v0.1.0-1.aarch64.rpm` (si se genera en Linux con `rpmbuild`)
+- `dist/linuxfsagent-v0.1.0-1.aarch64.rpm` (opcional, depende del host de build)
 - `dist/checksums.txt`
 
 Instalación directa desde endpoint:
